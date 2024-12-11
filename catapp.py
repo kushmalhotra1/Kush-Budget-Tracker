@@ -13,7 +13,6 @@ import pandas as pd
 st.set_page_config(page_title="Kush's Financial Goals Tracker", layout="wide")
 st.title("Kush's Financial Goals Tracker")
 
-# Sidebar for Reset Button
 with st.sidebar:
     if st.button("Reset Data"):
         reset_data()
@@ -25,36 +24,30 @@ def welcome_tab():
         This application helps you to:
         - Set new financial goals.
         - Edit or delete existing goals.
-        - View upcoming goals within a selected timeframe.
+        - View upcoming goals within creative filters.
 
         Let's get started and achieve your financial aspirations!
     """)
 
-# Tab: Set Financial Goals
 def set_financial_goal():
     st.header("Set Financial Goals")
 
-    # Inputs for goal details
     goal_name = st.text_input("Goal Name")
     target_amount = st.number_input("Target Amount ($)", min_value=0.0, step=0.01)
     due_date = st.date_input("Due Date")
-
-    # Inputs for category details
     category_name = st.text_input("Category Name")
 
     if st.button("Add Financial Goal"):
         try:
-            # Start a transaction
+            # Start transaction
             session.begin()
 
-            # Check if category exists, if not, create it
             group = session.query(Group).filter_by(name=category_name).first()
             if not group:
                 group = Group(user_id=1, name=category_name)
                 session.add(group)
                 session.commit()
 
-            # Add the financial goal linked to the category
             new_goal = FinancialGoal(
                 user_id=1,
                 group_id=group.group_id,
@@ -80,7 +73,6 @@ def manage_goals():
     st.header("Manage Financial Goals")
 
     try:
-        # Fetch all financial goals
         goals = session.query(FinancialGoal).all()
         if goals:
             goal_names = [goal.goal_name for goal in goals]
@@ -115,7 +107,6 @@ def manage_goals():
                         st.success(f"Due date for '{selected_goal}' has been updated to {new_due_date}.")
 
                 elif edit_option == "Category":
-                    # Fetch all categories (groups)
                     groups = session.query(Group).all()
                     group_names = [group.name for group in groups]
                     selected_category_name = st.selectbox("Select New Category", options=group_names)
@@ -143,7 +134,7 @@ def manage_goals():
         st.error(f"An error occurred: {e}")
 
     finally:
-        session.close()  # Ensure session is closed
+        session.close()
 
 
 def view_future_goals():
@@ -167,7 +158,7 @@ def view_future_goals():
 
     elif filter_type == "Next 6 Months":
         start_date = date.today()
-        end_date = start_date + timedelta(days=182)  # approx. 6 months
+        end_date = start_date + timedelta(days=182)  # 6 months
 
     elif filter_type == "Next Year":
         start_date = date.today()
@@ -186,7 +177,6 @@ def view_future_goals():
             return
 
     elif filter_type == "By Category":
-        # Fetch all available categories
         try:
             session.begin()
             groups = session.query(Group).all()
@@ -201,7 +191,6 @@ def view_future_goals():
 
         selected_category = st.selectbox("Select Category", options=group_names)
 
-    # Query data with filtering logic
     try:
         session.begin()
         query = text("""
@@ -226,18 +215,14 @@ def view_future_goals():
     finally:
         session.close()
 
-    # Display results
     if results:
-        # Convert results to DataFrame
         goals_df = pd.DataFrame(results, columns=["Goal Name", "Target Amount", "Due Date", "Status", "Category Name"])
 
-        # Display filtered data
         st.subheader("Filtered Goals")
         st.dataframe(goals_df.style.format({"Target Amount": "${:,.2f}"}).set_properties(
             **{'font-size': '14px', 'background-color': '#f9f9f9'}
         ), width=1000, height=500)
 
-        # --- Add Summary Statistics ---
         st.markdown("---")
         st.subheader("Summary Statistics")
         total_goals = len(goals_df)
@@ -252,11 +237,9 @@ def view_future_goals():
         with col3:
             st.metric("Average Target Amount", f"${average_target_amount:,.2f}")
 
-        # --- Add Graphical Representations ---
         st.markdown("---")
         st.subheader("Graphical Insights")
 
-        # Bar Chart for Target Amounts by Goal
         st.markdown("### Target Amounts by Goal")
         bar_chart_data = goals_df[["Goal Name", "Target Amount"]]
         st.bar_chart(bar_chart_data.set_index("Goal Name"))
@@ -265,7 +248,7 @@ def view_future_goals():
         st.write("No goals found for the selected criteria.")
 
 
-# Tabs
+
 tab1, tab2, tab3, tab4 = st.tabs([
     "Welcome", "Set Goals", "Manage Goals", "View Future Goals"
 ])
@@ -279,6 +262,5 @@ with tab3:
 with tab4:
     view_future_goals()
 
-# Ensure User Exists
 ensure_user_exists()
 session.close()
